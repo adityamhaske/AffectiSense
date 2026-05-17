@@ -1,4 +1,4 @@
-# NeuroSense AI — Multimodal Mental Health Assessment Platform
+# AffectiSense — Multimodal Mental Health Assessment Platform
 
 <p align="center">
   <img src="https://img.shields.io/badge/Acoustics-HuBERT%20%7C%20Whisper-blueviolet?style=for-the-badge" alt="Audio Badge" />
@@ -8,9 +8,9 @@
   <img src="https://img.shields.io/badge/Clinical_AI-DSM--5%20%7C%20RAG-crimson?style=for-the-badge" alt="Clinical AI Badge" />
 </p>
 
-NeuroSense AI is an intelligent, clinically oriented, and **modality-resilient** mental health assessment platform. By fusing neurophysiological (EEG), vocal biomarker (audio), and behavioral (facial expressions/video) signals, NeuroSense AI provides objective, highly interpretable depression screening with calibrated confidence metrics. 
+AffectiSense is an intelligent, clinically oriented, and **modality-resilient** mental health assessment platform. By fusing neurophysiological (EEG), vocal biomarker (audio), and behavioral (facial expressions/video) signals, AffectiSense provides objective, highly interpretable depression screening with calibrated confidence metrics. 
 
-Unlike traditional multi-modal frameworks that fail when certain inputs are missing, **NeuroSense AI is designed to gracefully degrade**—producing meaningful severity and diagnostic predictions whether given a single modality (e.g., audio only) or the full EAV triplet.
+Unlike traditional multi-modal frameworks that fail when certain inputs are missing, **AffectiSense is designed to gracefully degrade**—producing meaningful severity and diagnostic predictions whether given a single modality (e.g., audio only) or the full EAV triplet.
 
 ---
 
@@ -73,7 +73,7 @@ Instead of high-dimensional direct concatenation, input embeddings are compresse
 
 ## 🗂 Data & Benchmark Strategy
 
-NeuroSense AI is developed and validated using leading clinical and behavioral datasets:
+AffectiSense is developed and validated using leading clinical and behavioral datasets:
 * **DAIC-WOZ / AVEC:** Multimodal clinical interview corpus containing raw audio, video features, and transcriptions mapped to PHQ-8 scores.
 * **MODMA:** Multi-modal Open Dataset for Mental-disorder Analysis containing high-density 128-channel EEG alongside audio signals.
 * **D-Vlog:** Large-scale spontaneous video logs labeled for depression classification.
@@ -137,8 +137,8 @@ NeuroSense AI is developed and validated using leading clinical and behavioral d
 ### Installation
 1. Clone the repository and navigate to the directory:
    ```bash
-   git clone https://github.com/adityamhaske/NeuroSense-AI.git
-   cd NeuroSense-AI
+   git clone https://github.com/adityamhaske/AffectiSense.git
+   cd AffectiSense
    ```
 
 2. Setup virtual environment and install backend dependencies:

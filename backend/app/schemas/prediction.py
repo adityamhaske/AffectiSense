@@ -1,4 +1,4 @@
-# NeuroSense AI — Pydantic Response/Request Schemas
+# AffectiSense — Pydantic Response/Request Schemas
 from pydantic import BaseModel, Field
 from typing import Optional
 from enum import Enum
@@ -29,7 +29,7 @@ class ModalityScore(BaseModel):
 
 
 class PredictionResponse(BaseModel):
-    """Full prediction response from the NeuroSense AI engine."""
+    """Full prediction response from the AffectiSense engine."""
     # --- Core Prediction ---
     prediction: str = Field(description="Binary label: 'depressed' or 'control'")
     depression_probability: float = Field(ge=0.0, le=1.0, description="Fused probability of depression")

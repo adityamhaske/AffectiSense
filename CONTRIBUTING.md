@@ -1,6 +1,6 @@
-# Contributing to NeuroSense AI
+# Contributing to AffectiSense
 
-Thank you for your interest in contributing to NeuroSense AI! We welcome community contributions to help build a world-class, modality-resilient mental health assessment platform.
+Thank you for your interest in contributing to AffectiSense! We welcome community contributions to help build a world-class, modality-resilient mental health assessment platform.
 
 By participating in this project, you agree to abide by our Code of Conduct.
 
@@ -29,8 +29,8 @@ By participating in this project, you agree to abide by our Code of Conduct.
 ### Python Backend
 1. Clone your fork:
    ```bash
-   git clone https://github.com/YOUR-USERNAME/NeuroSense-AI.git
-   cd NeuroSense-AI
+   git clone https://github.com/YOUR-USERNAME/AffectiSense.git
+   cd AffectiSense
    ```
 2. Set up virtual environment and install backend development dependencies:
    ```bash
@@ -64,4 +64,4 @@ feat: add MediaPipe landmark processing pipeline for video modality
 ---
 
 ## ⚖️ License
-By contributing to NeuroSense AI, you agree that your contributions will be licensed under the project's **MIT License**.
+By contributing to AffectiSense, you agree that your contributions will be licensed under the project's **MIT License**.

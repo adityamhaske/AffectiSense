@@ -1,1 +1,1 @@
-# NeuroSense AI Backend
+# AffectiSense Backend

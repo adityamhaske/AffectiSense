@@ -1,14 +1,14 @@
-# NeuroSense AI — Application Configuration
+# AffectiSense — Application Configuration
 from pydantic_settings import BaseSettings
 from pathlib import Path
 from typing import Optional
 
 
 class Settings(BaseSettings):
-    """Central configuration for the NeuroSense AI platform."""
+    """Central configuration for the AffectiSense platform."""
 
     # --- Application ---
-    APP_NAME: str = "NeuroSense AI"
+    APP_NAME: str = "AffectiSense"
     APP_VERSION: str = "1.0.0"
     APP_DESCRIPTION: str = "Multimodal Mental Health Assessment Platform"
     DEBUG: bool = True
