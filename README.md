@@ -137,8 +137,8 @@ NeuroSense AI is developed and validated using leading clinical and behavioral d
 ### Installation
 1. Clone the repository and navigate to the directory:
    ```bash
-   git clone https://github.com/adityamhaske/NeuroSense-AI-Multimodal-Mental-Health-Assessment-Platform.git
-   cd NeuroSense-AI-Multimodal-Mental-Health-Assessment-Platform
+   git clone https://github.com/adityamhaske/NeuroSense-AI.git
+   cd NeuroSense-AI
    ```
 
 2. Setup virtual environment and install backend dependencies:

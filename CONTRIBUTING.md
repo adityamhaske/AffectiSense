@@ -29,8 +29,8 @@ By participating in this project, you agree to abide by our Code of Conduct.
 ### Python Backend
 1. Clone your fork:
    ```bash
-   git clone https://github.com/YOUR-USERNAME/NeuroSense-AI-Multimodal-Mental-Health-Assessment-Platform.git
-   cd NeuroSense-AI-Multimodal-Mental-Health-Assessment-Platform
+   git clone https://github.com/YOUR-USERNAME/NeuroSense-AI.git
+   cd NeuroSense-AI
    ```
 2. Set up virtual environment and install backend development dependencies:
    ```bash
