@@ -1,6 +1,6 @@
 "use client";
 
-import { PredictionResult } from "@/app/page";
+import { PredictionResult } from "@/types";
 
 interface Props {
   result: PredictionResult;

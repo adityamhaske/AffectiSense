@@ -1,121 +1,96 @@
-"use client";
+import Link from "next/link";
 
-import { useState } from "react";
-import Header from "@/components/Header";
-import HeroSection from "@/components/HeroSection";
-import UploadSection from "@/components/UploadSection";
-import ResultsDashboard from "@/components/ResultsDashboard";
-import FeaturesSection from "@/components/FeaturesSection";
-import Footer from "@/components/Footer";
-
-export interface PredictionResult {
-  prediction: string;
-  depression_probability: number;
-  severity_level: string;
-  severity_score: number;
-  overall_confidence: number;
-  modality_completeness: number;
-  modality_scores: {
-    modality: string;
-    available: boolean;
-    prediction_score: number | null;
-    confidence: number | null;
-    key_indicators: string[];
-  }[];
-  clinical_summary: string;
-  risk_factors: string[];
-  protective_factors: string[];
-  modalities_used: string[];
-  processing_time_ms: number;
-  model_version: string;
-}
-
-export default function Home() {
-  const [result, setResult] = useState<PredictionResult | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-
-  const handleAnalysis = async (audioFile: File | null, videoFile: File | null) => {
-    setIsAnalyzing(true);
-    setResult(null);
-
-    const formData = new FormData();
-    if (audioFile) formData.append("audio", audioFile);
-    if (videoFile) formData.append("video", videoFile);
-
-    try {
-      const response = await fetch("http://localhost:8000/api/v1/analyze", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.detail || "Analysis failed");
-      }
-
-      const data: PredictionResult = await response.json();
-      setResult(data);
-    } catch (error) {
-      console.error("Analysis error:", error);
-      // Generate demo result for showcase purposes
-      setResult(generateDemoResult(audioFile !== null, videoFile !== null));
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
+export default function HomePage() {
   return (
-    <main className="min-h-screen">
-      <Header />
-      <HeroSection />
-      <UploadSection onAnalyze={handleAnalysis} isAnalyzing={isAnalyzing} />
-      {result && <ResultsDashboard result={result} />}
-      <FeaturesSection />
-      <Footer />
-    </main>
-  );
-}
+    <div className="relative overflow-hidden">
+      {/* Background gradient orbs */}
+      <div className="absolute top-20 left-1/4 w-96 h-96 rounded-full opacity-20 blur-3xl pointer-events-none"
+        style={{ background: "radial-gradient(circle, #6366f1, transparent 70%)" }} />
+      <div className="absolute top-40 right-1/4 w-80 h-80 rounded-full opacity-15 blur-3xl pointer-events-none"
+        style={{ background: "radial-gradient(circle, #06b6d4, transparent 70%)" }} />
 
-function generateDemoResult(hasAudio: boolean, hasVideo: boolean): PredictionResult {
-  return {
-    prediction: "depressed",
-    depression_probability: 0.73,
-    severity_level: "moderate",
-    severity_score: 0.52,
-    overall_confidence: hasAudio && hasVideo ? 0.85 : 0.67,
-    modality_completeness: hasAudio && hasVideo ? 1.0 : 0.5,
-    modality_scores: [
-      {
-        modality: "audio",
-        available: hasAudio,
-        prediction_score: hasAudio ? 0.71 : null,
-        confidence: hasAudio ? 0.82 : null,
-        key_indicators: hasAudio
-          ? ["Reduced pitch variability (monotone speech)", "Low vocal energy", "Long pauses / low speech activity"]
-          : [],
-      },
-      {
-        modality: "video",
-        available: hasVideo,
-        prediction_score: hasVideo ? 0.68 : null,
-        confidence: hasVideo ? 0.79 : null,
-        key_indicators: hasVideo
-          ? ["Flat affect (reduced facial expressiveness)", "Minimal head movement (psychomotor retardation)"]
-          : [],
-      },
-    ],
-    clinical_summary:
-      "Based on vocal analysis (reduced pitch variability, low vocal energy) and facial expression analysis (flat affect, minimal head movement), the subject shows indicators consistent with moderate depressive affect. Confidence: 85%. Clinical follow-up is recommended for comprehensive evaluation.",
-    risk_factors: [
-      "Reduced pitch variability (monotone speech)",
-      "Low vocal energy",
-      "Flat affect (reduced facial expressiveness)",
-      "Minimal head movement (psychomotor retardation)",
-      "Long pauses / low speech activity",
-    ],
-    protective_factors: ["Normal speech rate", "Adequate blink rate"],
-    modalities_used: [hasAudio ? "audio" : "", hasVideo ? "video" : ""].filter(Boolean),
-    processing_time_ms: 2340.5,
-    model_version: "1.0.0",
-  };
+      {/* Hero */}
+      <section className="relative z-10 pt-20 pb-24 px-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-elevated)] text-xs font-medium text-[var(--color-text-secondary)] mb-8 animate-fade-in-up">
+            <span className="w-2 h-2 rounded-full bg-[var(--color-success)] animate-pulse" />
+            Modality-Resilient AI • Audio + Video
+          </div>
+
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-tight tracking-tight mb-6 animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
+            Multimodal{" "}
+            <span className="gradient-text">Mental Health</span>
+            <br />
+            Assessment Platform
+          </h1>
+
+          <p className="text-lg sm:text-xl text-[var(--color-text-secondary)] max-w-2xl mx-auto mb-10 leading-relaxed animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
+            Record speech or facial video directly in your browser for AI-powered depression screening with{" "}
+            <span className="text-[var(--color-text-primary)] font-medium">calibrated confidence scores</span> and{" "}
+            <span className="text-[var(--color-text-primary)] font-medium">clinically interpretable explanations</span>.
+          </p>
+
+          <div className="flex flex-wrap justify-center gap-4 mb-16 animate-fade-in-up" style={{ animationDelay: "0.3s" }}>
+            <Link href="/analyze"
+              className="px-8 py-3.5 rounded-xl font-semibold text-white transition-all hover:scale-105 glow-primary"
+              style={{ background: "linear-gradient(135deg, #6366f1, #4f46e5)" }}>
+              Start Recording →
+            </Link>
+            <Link href="/about"
+              className="px-8 py-3.5 rounded-xl font-semibold text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:border-[var(--color-primary)] transition-all hover:text-[var(--color-text-primary)]">
+              How It Works
+            </Link>
+          </div>
+
+          {/* Stats */}
+          <div className="flex flex-wrap justify-center gap-8 sm:gap-16 animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
+            {[
+              { value: "2", label: "Modalities" },
+              { value: "136+", label: "Audio Features" },
+              { value: "468", label: "Facial Landmarks" },
+              { value: "<3s", label: "Inference" },
+            ].map((stat) => (
+              <div key={stat.label} className="text-center">
+                <div className="text-2xl font-bold gradient-text">{stat.value}</div>
+                <div className="text-xs text-[var(--color-text-muted)] mt-1">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Mode cards */}
+      <section className="relative z-10 pb-24 px-6">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-2xl font-bold text-center mb-10">
+            Choose Your <span className="gradient-text">Recording Mode</span>
+          </h2>
+          <div className="grid sm:grid-cols-3 gap-6">
+            {[
+              { icon: "🎙️", title: "Audio Only", desc: "Record speech for vocal biomarker analysis — pitch, prosody, energy, and speech patterns.", href: "/analyze?mode=audio", color: "#6366f1" },
+              { icon: "📹", title: "Video Only", desc: "Record facial video for expression dynamics — action units, blink rate, head pose.", href: "/analyze?mode=video", color: "#06b6d4" },
+              { icon: "🎬", title: "Audio + Video", desc: "Record both simultaneously for maximum accuracy with full cross-modal fusion.", href: "/analyze?mode=both", color: "#10b981" },
+            ].map((mode) => (
+              <Link key={mode.title} href={mode.href}
+                className="glass-card p-8 text-center group hover:scale-[1.02] transition-all">
+                <div className="text-4xl mb-4">{mode.icon}</div>
+                <h3 className="text-lg font-semibold mb-2 group-hover:text-[var(--color-primary)] transition-colors">{mode.title}</h3>
+                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">{mode.desc}</p>
+                <div className="mt-4 text-xs font-medium transition-colors" style={{ color: mode.color }}>
+                  Start →
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-[var(--color-border)] py-8 px-6 text-center">
+        <p className="text-xs text-[var(--color-text-muted)] max-w-md mx-auto">
+          For educational and research purposes only. Not a diagnostic medical device. Clinical follow-up is always recommended.
+        </p>
+      </footer>
+    </div>
+  );
 }
