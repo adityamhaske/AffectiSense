@@ -34,7 +34,12 @@ export default function HomePage() {
             <Link href="/analyze"
               className="px-8 py-3.5 rounded-xl font-semibold text-white transition-all hover:scale-105 glow-primary"
               style={{ background: "linear-gradient(135deg, #6366f1, #4f46e5)" }}>
-              Start Recording →
+              Upload Analysis →
+            </Link>
+            <Link href="/interview"
+              className="px-8 py-3.5 rounded-xl font-semibold text-white transition-all hover:scale-105"
+              style={{ background: "linear-gradient(135deg, #06b6d4, #0891b2)" }}>
+              Start Conversational Interview
             </Link>
             <Link href="/about"
               className="px-8 py-3.5 rounded-xl font-semibold text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:border-[var(--color-primary)] transition-all hover:text-[var(--color-text-primary)]">

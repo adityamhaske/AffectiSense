@@ -24,9 +24,12 @@ from backend.app.schemas.prediction import (
     PredictionResponse, HealthResponse, Modality,
 )
 from backend.app.services.inference import InferenceService
+from backend.app.pipelines.linguistic import LinguisticPipeline
+import json
 
 # --- Globals ---
 inference_service = InferenceService()
+linguistic_pipeline = LinguisticPipeline()
 
 
 @asynccontextmanager
@@ -178,3 +181,39 @@ async def list_modalities():
             },
         ]
     }
+
+
+@app.post("/api/v1/interview/process", tags=["interview"])
+async def process_interview_segment(
+    audio: UploadFile = File(..., description="Audio segment of the user's response"),
+    history: str = Form("[]", description="JSON string of conversation history [{'role': '...', 'content': '...'}]")
+):
+    """
+    Process a conversational segment using the Linguistic Pipeline (Whisper + LLM).
+    Returns the transcript, sentiment, clinical themes, and the generated next question.
+    """
+    audio_path = None
+    try:
+        context_history = json.loads(history)
+        
+        audio_ext = Path(audio.filename or "audio.wav").suffix or ".wav"
+        audio_path = _save_upload(audio, audio_ext)
+        logger.info(f"Interview Audio uploaded: {audio.filename} → {audio_path}")
+        
+        # Run linguistic pipeline
+        features = linguistic_pipeline.process(str(audio_path), context_history)
+        
+        return {
+            "transcript": features.transcript,
+            "sentiment_label": features.sentiment_label,
+            "sentiment_score": float(features.sentiment_score),
+            "clinical_themes": features.clinical_themes,
+            "next_question": features.next_question
+        }
+        
+    except Exception as e:
+        logger.exception(f"Interview processing failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Processing error: {str(e)}")
+    finally:
+        if audio_path and audio_path.exists():
+            audio_path.unlink()
