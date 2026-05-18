@@ -61,8 +61,16 @@ function SeverityBar({ level, score }: { level: string; score: number }) {
   );
 }
 
+import { useState, useEffect } from "react";
+
 export default function ResultsDashboard({ result }: Props) {
   const isDepressed = result.prediction === "depressed";
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const url = sessionStorage.getItem("affectisense_video_url");
+    if (url) setVideoUrl(url);
+  }, []);
 
   return (
     <section className="py-16 px-6 animate-fade-in-up">
@@ -71,44 +79,74 @@ export default function ResultsDashboard({ result }: Props) {
           Analysis <span className="gradient-text">Results</span>
         </h2>
 
+        {/* Warning Banner for Untrained Model */}
+        {!result.is_model_trained && (
+          <div className="mb-8 p-4 rounded-xl bg-orange-500/10 border border-orange-500/30 flex items-start gap-4">
+            <div className="text-2xl mt-0.5">⚠️</div>
+            <div>
+              <h3 className="font-bold text-orange-400 mb-1">Model Untrained — Biomarkers Only</h3>
+              <p className="text-sm text-[var(--color-text-secondary)]">
+                The AI system is currently operating without trained diagnostic weights. Diagnostic gauges (Prediction, Confidence, Severity) have been disabled. 
+                The raw clinical features (pitch, blink rates, Action Units) extracted below are real and verifiable.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Video Playback */}
+        {videoUrl && (
+          <div className="mb-8 glass-card overflow-hidden">
+            <div className="bg-black/20 p-3 border-b border-[var(--color-border)]">
+              <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] flex items-center gap-2">
+                <span className="text-xl">🎬</span> Recorded Media
+              </h3>
+            </div>
+            <div className="flex justify-center bg-black">
+              <video src={videoUrl} controls className="max-h-[400px] w-auto aspect-video" style={{ transform: "scaleX(-1)" }} />
+            </div>
+          </div>
+        )}
+
         {/* Top row: Prediction + Confidence + Severity */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          {/* Prediction card */}
-          <div className={`glass-card p-6 text-center ${isDepressed ? "glow-danger" : "glow-success"}`}>
-            <div className={`w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center ${
-              isDepressed ? "bg-[rgba(239,68,68,0.15)]" : "bg-[rgba(16,185,129,0.15)]"
-            }`}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
-                stroke={isDepressed ? "#ef4444" : "#10b981"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                {isDepressed ? (
-                  <><circle cx="12" cy="12" r="10"/><line x1="8" y1="15" x2="16" y2="15"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></>
-                ) : (
-                  <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>
-                )}
-              </svg>
+        {result.is_model_trained && (
+          <div className="grid md:grid-cols-3 gap-6 mb-8">
+            {/* Prediction card */}
+            <div className={`glass-card p-6 text-center ${isDepressed ? "glow-danger" : "glow-success"}`}>
+              <div className={`w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center ${
+                isDepressed ? "bg-[rgba(239,68,68,0.15)]" : "bg-[rgba(16,185,129,0.15)]"
+              }`}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+                  stroke={isDepressed ? "#ef4444" : "#10b981"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  {isDepressed ? (
+                    <><circle cx="12" cy="12" r="10"/><line x1="8" y1="15" x2="16" y2="15"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></>
+                  ) : (
+                    <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>
+                  )}
+                </svg>
+              </div>
+              <div className={`text-2xl font-bold capitalize ${isDepressed ? "text-[var(--color-danger)]" : "text-[var(--color-success)]"}`}>
+                {result.prediction}
+              </div>
+              <div className="text-sm text-[var(--color-text-muted)] mt-1">
+                Probability: {((result.depression_probability || 0) * 100).toFixed(1)}%
+              </div>
             </div>
-            <div className={`text-2xl font-bold capitalize ${isDepressed ? "text-[var(--color-danger)]" : "text-[var(--color-success)]"}`}>
-              {result.prediction}
-            </div>
-            <div className="text-sm text-[var(--color-text-muted)] mt-1">
-              Probability: {(result.depression_probability * 100).toFixed(1)}%
-            </div>
-          </div>
 
-          {/* Confidence ring */}
-          <div className="glass-card p-6 flex flex-col items-center justify-center">
-            <ConfidenceRing value={result.overall_confidence} label="Confidence" />
-            <div className="text-xs text-[var(--color-text-muted)] mt-3">
-              {result.modality_completeness === 1 ? "Full modality coverage" : "Partial modality coverage"}
+            {/* Confidence ring */}
+            <div className="glass-card p-6 flex flex-col items-center justify-center">
+              <ConfidenceRing value={result.overall_confidence} label="Confidence" />
+              <div className="text-xs text-[var(--color-text-muted)] mt-3">
+                {result.modality_completeness === 1 ? "Full modality coverage" : "Partial modality coverage"}
+              </div>
+            </div>
+
+            {/* Severity */}
+            <div className="glass-card p-6 flex flex-col justify-center">
+              <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-4 text-center">Severity Assessment</h3>
+              <SeverityBar level={result.severity_level || "none"} score={result.severity_score || 0} />
             </div>
           </div>
-
-          {/* Severity */}
-          <div className="glass-card p-6 flex flex-col justify-center">
-            <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-4 text-center">Severity Assessment</h3>
-            <SeverityBar level={result.severity_level} score={result.severity_score} />
-          </div>
-        </div>
+        )}
 
         {/* Per-modality breakdown */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">

@@ -31,10 +31,11 @@ class ModalityScore(BaseModel):
 class PredictionResponse(BaseModel):
     """Full prediction response from the AffectiSense engine."""
     # --- Core Prediction ---
-    prediction: str = Field(description="Binary label: 'depressed' or 'control'")
-    depression_probability: float = Field(ge=0.0, le=1.0, description="Fused probability of depression")
-    severity_level: SeverityLevel = Field(description="Estimated severity category")
-    severity_score: float = Field(ge=0.0, le=1.0, description="Continuous severity estimate (0=none, 1=severe)")
+    is_model_trained: bool = Field(default=True, description="True if trained weights were used, False if only biomarkers are returned")
+    prediction: Optional[str] = Field(default=None, description="Binary label: 'depressed' or 'control'")
+    depression_probability: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Fused probability of depression")
+    severity_level: Optional[SeverityLevel] = Field(default=None, description="Estimated severity category")
+    severity_score: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Continuous severity estimate (0=none, 1=severe)")
 
     # --- Confidence ---
     overall_confidence: float = Field(ge=0.0, le=1.0, description="Calibrated confidence in the prediction")

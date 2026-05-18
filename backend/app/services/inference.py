@@ -67,6 +67,14 @@ def _generate_clinical_summary(
             f"Clinical follow-up is recommended for comprehensive evaluation."
         )
 
+def _generate_untrained_summary(audio_indicators: list[str], video_indicators: list[str]) -> str:
+    """Generate a summary explicitly stating only raw biomarkers are provided."""
+    return (
+        "Model Untrained. Diagnostics disabled. Displaying raw clinical biomarkers "
+        "extracted from audio and/or video. Please refer to the risk and protective "
+        "factors below for analysis of speech patterns and facial dynamics."
+    )
+
 
 def _analyze_audio_indicators(features: AudioFeatures) -> tuple[list[str], list[str]]:
     """Derive human-readable risk/protective indicators from audio features."""
@@ -158,12 +166,13 @@ class InferenceService:
         if checkpoint_path and checkpoint_path.exists():
             state_dict = torch.load(checkpoint_path, map_location=self.device)
             self.model.load_state_dict(state_dict)
+            self.model.eval()
+            self._model_loaded = True
             logger.info(f"Loaded model checkpoint: {checkpoint_path}")
         else:
-            logger.warning("No checkpoint found — using randomly initialized model (demo mode)")
-
-        self.model.eval()
-        self._model_loaded = True
+            self._model_loaded = False
+            self.model = None
+            logger.warning("No checkpoint found — entering Ethical Fallback mode (Biomarkers Only).")
 
     @property
     def is_ready(self) -> bool:
@@ -184,7 +193,8 @@ class InferenceService:
         Returns:
             PredictionResponse with prediction, confidence, and explanations.
         """
-        if not self._model_loaded:
+        # Attempt to load model if not already checked
+        if not self._model_loaded and self.model is None:
             self.load_model()
 
         start_time = time.time()
@@ -220,6 +230,41 @@ class InferenceService:
 
         if not modalities_used:
             raise ValueError("No modalities could be processed. Please provide valid audio or video input.")
+
+        # --- Ethical Fallback (Untrained) ---
+        if not self._model_loaded:
+            processing_time = (time.time() - start_time) * 1000
+            
+            # Empty modality scores without prediction data
+            modality_scores = []
+            if Modality.AUDIO in modalities_used:
+                modality_scores.append(ModalityScore(
+                    modality=Modality.AUDIO, available=True, prediction_score=None, confidence=None, key_indicators=audio_risk[:5]
+                ))
+            if Modality.VIDEO in modalities_used:
+                modality_scores.append(ModalityScore(
+                    modality=Modality.VIDEO, available=True, prediction_score=None, confidence=None, key_indicators=video_risk[:5]
+                ))
+
+            all_risk = audio_risk + video_risk
+            all_protective = audio_protective + video_protective
+
+            return PredictionResponse(
+                is_model_trained=False,
+                prediction=None,
+                depression_probability=None,
+                severity_level=None,
+                severity_score=None,
+                overall_confidence=0.0,
+                modality_completeness=1.0 if len(modalities_used) == 2 else 0.5,
+                modality_scores=modality_scores,
+                clinical_summary=_generate_untrained_summary(audio_risk, video_risk),
+                risk_factors=all_risk[:10],
+                protective_factors=all_protective[:10],
+                modalities_used=modalities_used,
+                processing_time_ms=round(processing_time, 2),
+                model_version=settings.APP_VERSION,
+            )
 
         # --- Model inference with confidence ---
         with torch.no_grad():
@@ -268,6 +313,7 @@ class InferenceService:
         processing_time = (time.time() - start_time) * 1000
 
         return PredictionResponse(
+            is_model_trained=True,
             prediction=prediction,
             depression_probability=round(depression_prob, 4),
             severity_level=severity_level,

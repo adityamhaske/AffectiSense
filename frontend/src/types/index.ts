@@ -1,8 +1,9 @@
 export interface PredictionResult {
-  prediction: string;
-  depression_probability: number;
-  severity_level: string;
-  severity_score: number;
+  is_model_trained: boolean;
+  prediction: string | null;
+  depression_probability: number | null;
+  severity_level: string | null;
+  severity_score: number | null;
   overall_confidence: number;
   modality_completeness: number;
   modality_scores: {

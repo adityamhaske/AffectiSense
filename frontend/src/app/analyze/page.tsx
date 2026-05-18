@@ -136,8 +136,25 @@ function AnalyzeContent() {
       });
       if (!res.ok) throw new Error((await res.json()).detail || "Analysis failed");
       const data = await res.json();
-      // Store result and navigate
+      
+      // Store result
       sessionStorage.setItem("affectisense_result", JSON.stringify(data));
+      
+      // Store video URL for playback if video was used
+      if (uploadFile) {
+        const ext = uploadFile.name.split(".").pop()?.toLowerCase();
+        const isVideo = ["mp4", "avi", "mov", "webm", "mkv"].includes(ext || "");
+        if (isVideo) {
+          sessionStorage.setItem("affectisense_video_url", URL.createObjectURL(uploadFile));
+        } else {
+          sessionStorage.removeItem("affectisense_video_url");
+        }
+      } else if (videoBlob && (mode === "video" || mode === "both")) {
+        sessionStorage.setItem("affectisense_video_url", URL.createObjectURL(videoBlob));
+      } else {
+        sessionStorage.removeItem("affectisense_video_url");
+      }
+
       router.push("/results");
     } catch {
       // Demo mode — generate mock result
@@ -340,19 +357,20 @@ export default function AnalyzePage() {
 
 function generateDemoResult(hasAudio: boolean, hasVideo: boolean) {
   return {
-    prediction: "depressed",
-    depression_probability: 0.73,
-    severity_level: "moderate",
-    severity_score: 0.52,
-    overall_confidence: hasAudio && hasVideo ? 0.85 : 0.67,
+    is_model_trained: false,
+    prediction: null,
+    depression_probability: null,
+    severity_level: null,
+    severity_score: null,
+    overall_confidence: 0.0,
     modality_completeness: hasAudio && hasVideo ? 1.0 : 0.5,
     modality_scores: [
-      { modality: "audio", available: hasAudio, prediction_score: hasAudio ? 0.71 : null, confidence: hasAudio ? 0.82 : null,
+      { modality: "audio", available: hasAudio, prediction_score: null, confidence: null,
         key_indicators: hasAudio ? ["Reduced pitch variability (monotone speech)", "Low vocal energy", "Long pauses / low speech activity"] : [] },
-      { modality: "video", available: hasVideo, prediction_score: hasVideo ? 0.68 : null, confidence: hasVideo ? 0.79 : null,
+      { modality: "video", available: hasVideo, prediction_score: null, confidence: null,
         key_indicators: hasVideo ? ["Flat affect (reduced facial expressiveness)", "Minimal head movement (psychomotor retardation)"] : [] },
     ],
-    clinical_summary: "Based on vocal analysis (reduced pitch variability, low vocal energy) and facial expression analysis (flat affect, minimal head movement), the subject shows indicators consistent with moderate depressive affect. Confidence: 85%. Clinical follow-up is recommended.",
+    clinical_summary: "Model Untrained. Diagnostics disabled. Displaying raw clinical biomarkers extracted from audio and/or video. Please refer to the risk and protective factors below for analysis of speech patterns and facial dynamics.",
     risk_factors: ["Reduced pitch variability", "Low vocal energy", "Flat affect", "Minimal head movement", "Long pauses"],
     protective_factors: ["Normal speech rate", "Adequate blink rate"],
     modalities_used: [hasAudio ? "audio" : "", hasVideo ? "video" : ""].filter(Boolean),
