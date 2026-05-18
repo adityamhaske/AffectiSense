@@ -163,6 +163,11 @@ class InferenceService:
             modality_dropout_prob=settings.MODALITY_DROPOUT_PROB,
         ).to(self.device)
 
+        if not checkpoint_path:
+            default_path = Path("affectisense_best_weights.pt")
+            if default_path.exists():
+                checkpoint_path = default_path
+
         if checkpoint_path and checkpoint_path.exists():
             state_dict = torch.load(checkpoint_path, map_location=self.device)
             self.model.load_state_dict(state_dict)

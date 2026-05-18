@@ -128,7 +128,7 @@ def train_model(args):
     train_dataset = MultimodalDepressionDataset(data_dir, train_df, data_dir / "cache")
     val_dataset = MultimodalDepressionDataset(data_dir, val_df, data_dir / "cache")
 
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=0)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
 
     # 3. Loss & Optimizer
@@ -156,11 +156,13 @@ def train_model(args):
             audio[~batch["audio_avail"].squeeze()] = 0.0
             video[~batch["video_avail"].squeeze()] = 0.0
 
-            out_binary, out_severity = model(audio, video)
+            out = model(audio, video)
+            out_binary = torch.sigmoid(out["logits"])
+            out_severity = out["severity"]
             
             # Joint Loss: 70% Classification, 30% Severity Regression
-            loss_bin = criterion_bce(out_binary, batch["binary"].to(device))
-            loss_sev = criterion_mse(out_severity, batch["severity"].to(device))
+            loss_bin = criterion_bce(out_binary, batch["binary"].to(device).squeeze())
+            loss_sev = criterion_mse(out_severity, batch["severity"].to(device).squeeze())
             loss = 0.7 * loss_bin + 0.3 * loss_sev
             
             loss.backward()
@@ -186,10 +188,12 @@ def train_model(args):
                 audio[~batch["audio_avail"].squeeze()] = 0.0
                 video[~batch["video_avail"].squeeze()] = 0.0
 
-                out_binary, out_severity = model(audio, video)
+                out = model(audio, video)
+                out_binary = torch.sigmoid(out["logits"])
+                out_severity = out["severity"]
                 
-                loss_bin = criterion_bce(out_binary, batch["binary"].to(device))
-                loss_sev = criterion_mse(out_severity, batch["severity"].to(device))
+                loss_bin = criterion_bce(out_binary, batch["binary"].to(device).squeeze())
+                loss_sev = criterion_mse(out_severity, batch["severity"].to(device).squeeze())
                 loss = 0.7 * loss_bin + 0.3 * loss_sev
                 val_loss += loss.item()
                 
