@@ -1,0 +1,1 @@
+# AffectiSense — Pydantic Schemas
