@@ -180,8 +180,8 @@ class AffectiSenseModel(nn.Module):
 
     def __init__(
         self,
-        audio_input_dim: int = 136,
-        video_input_dim: int = 16,
+        audio_input_dim: int = 119,
+        video_input_dim: int = 38,
         embed_dim: int = 256,
         n_bottleneck: int = 32,
         n_heads: int = 8,

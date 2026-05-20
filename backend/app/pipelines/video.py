@@ -29,6 +29,14 @@ LANDMARK_INDICES = {
     "upper_lip": 13, "lower_lip": 14,
     "forehead": 10,
     "left_cheek": 234, "right_cheek": 454,
+    # Iris landmarks (available when refine_landmarks=True)
+    "left_iris_center": 468, "left_iris_right": 469,
+    "left_iris_top": 470, "left_iris_left": 471,
+    "right_iris_center": 473, "right_iris_right": 474,
+    "right_iris_top": 475, "right_iris_left": 476,
+    # Additional eye corner landmarks for gaze reference frame
+    "left_eye_inner": 133, "left_eye_outer": 33,
+    "right_eye_inner": 362, "right_eye_outer": 263,
 }
 
 
@@ -62,6 +70,38 @@ class VideoFeatures:
     # Temporal dynamics
     au_change_rate: float = 0.0
 
+    # --- NEW: Gaze direction features ---
+    avg_gaze_horizontal: float = 0.0
+    avg_gaze_vertical: float = 0.0
+    gaze_horizontal_std: float = 0.0
+    gaze_vertical_std: float = 0.0
+    gaze_stability: float = 0.0           # combined std of gaze angles
+    gaze_avoidance_ratio: float = 0.0     # fraction of frames with gaze > threshold from center
+
+    # --- NEW: Facial asymmetry features ---
+    avg_eye_asymmetry: float = 0.0
+    avg_brow_asymmetry: float = 0.0
+    avg_mouth_asymmetry: float = 0.0
+    overall_facial_asymmetry: float = 0.0
+
+    # --- NEW: Smile intensity features ---
+    avg_smile_intensity: float = 0.0
+    smile_intensity_std: float = 0.0
+    smile_frequency: float = 0.0          # smiles per minute
+    avg_smile_duration_frames: float = 0.0
+
+    # --- NEW: Micro-expression features ---
+    micro_expression_count: float = 0.0
+    micro_expression_rate: float = 0.0    # events per minute
+
+    # --- NEW: Head pose stability features ---
+    head_pitch_std: float = 0.0
+    head_yaw_std: float = 0.0
+    head_roll_std: float = 0.0
+    head_pitch_range: float = 0.0
+    head_yaw_range: float = 0.0
+    head_roll_range: float = 0.0
+
     # Metadata
     n_frames_processed: int = 0
     n_faces_detected: int = 0
@@ -72,6 +112,7 @@ class VideoFeatures:
     def to_vector(self) -> np.ndarray:
         """Flatten all features into a single 1-D vector for model input."""
         vector = np.array([
+            # Original 16 features
             self.blink_rate, self.avg_eye_openness, self.eye_openness_std,
             self.avg_brow_height, self.brow_height_std,
             self.avg_mouth_openness, self.mouth_openness_std,
@@ -79,6 +120,21 @@ class VideoFeatures:
             self.avg_head_pitch, self.avg_head_yaw, self.head_movement_magnitude,
             self.facial_expressiveness, self.expression_variability,
             self.au_change_rate, self.face_detection_rate,
+            # Gaze direction (6)
+            self.avg_gaze_horizontal, self.avg_gaze_vertical,
+            self.gaze_horizontal_std, self.gaze_vertical_std,
+            self.gaze_stability, self.gaze_avoidance_ratio,
+            # Facial asymmetry (4)
+            self.avg_eye_asymmetry, self.avg_brow_asymmetry,
+            self.avg_mouth_asymmetry, self.overall_facial_asymmetry,
+            # Smile intensity (4)
+            self.avg_smile_intensity, self.smile_intensity_std,
+            self.smile_frequency, self.avg_smile_duration_frames,
+            # Micro-expression (2)
+            self.micro_expression_count, self.micro_expression_rate,
+            # Head pose stability (6)
+            self.head_pitch_std, self.head_yaw_std, self.head_roll_std,
+            self.head_pitch_range, self.head_yaw_range, self.head_roll_range,
         ], dtype=np.float32)
         self.n_features = len(vector)
         return vector
@@ -165,7 +221,7 @@ class VideoPipeline:
         return frame_data
 
     def _compute_frame_measurements(self, landmarks: np.ndarray) -> dict:
-        """Compute per-frame facial measurements from 468 landmarks."""
+        """Compute per-frame facial measurements from 478 landmarks (468 + 10 iris)."""
         def dist(idx1: int, idx2: int) -> float:
             return float(np.linalg.norm(landmarks[idx1] - landmarks[idx2]))
 
@@ -197,13 +253,75 @@ class VideoPipeline:
         face_horizontal = right_cheek - left_cheek
         head_yaw = float(np.arctan2(face_horizontal[2], face_horizontal[0]))
 
+        # Head roll (tilt angle of the face-horizontal vector in the XY plane)
+        head_roll = float(np.arctan2(face_horizontal[1], face_horizontal[0]))
+
+        # --- NEW: Gaze direction estimation using iris landmarks ---
+        # Compute gaze angle for each eye as iris displacement relative to eye center
+        left_eye_inner = landmarks[ix["left_eye_inner"]]
+        left_eye_outer = landmarks[ix["left_eye_outer"]]
+        left_eye_center = (left_eye_inner + left_eye_outer) / 2.0
+        left_iris = landmarks[ix["left_iris_center"]]
+        left_eye_width = float(np.linalg.norm(left_eye_inner - left_eye_outer))
+
+        right_eye_inner = landmarks[ix["right_eye_inner"]]
+        right_eye_outer = landmarks[ix["right_eye_outer"]]
+        right_eye_center = (right_eye_inner + right_eye_outer) / 2.0
+        right_iris = landmarks[ix["right_iris_center"]]
+        right_eye_width = float(np.linalg.norm(right_eye_inner - right_eye_outer))
+
+        # Normalise iris offset by eye width to get scale-invariant gaze angle proxy
+        eye_width_avg = max((left_eye_width + right_eye_width) / 2.0, 1e-6)
+        left_gaze_h = (left_iris[0] - left_eye_center[0]) / max(left_eye_width, 1e-6)
+        left_gaze_v = (left_iris[1] - left_eye_center[1]) / max(left_eye_width, 1e-6)
+        right_gaze_h = (right_iris[0] - right_eye_center[0]) / max(right_eye_width, 1e-6)
+        right_gaze_v = (right_iris[1] - right_eye_center[1]) / max(right_eye_width, 1e-6)
+
+        gaze_horizontal = (left_gaze_h + right_gaze_h) / 2.0
+        gaze_vertical = (left_gaze_v + right_gaze_v) / 2.0
+
+        # --- NEW: Facial asymmetry ---
+        eye_asymmetry = abs(left_eye_open - right_eye_open) / max(eye_openness, 1e-6)
+        brow_asymmetry = abs(left_brow - right_brow) / max(brow_height, 1e-6)
+        left_mouth_corner_y = landmarks[ix["left_mouth_corner"]][1]
+        right_mouth_corner_y = landmarks[ix["right_mouth_corner"]][1]
+        mouth_center_y = (left_mouth_corner_y + right_mouth_corner_y) / 2.0
+        mouth_asymmetry = abs(left_mouth_corner_y - right_mouth_corner_y) / max(abs(mouth_center_y), 1e-6)
+
+        # --- NEW: Smile intensity ---
+        # Smile score: mouth corners rise (lower y = higher in image) relative to
+        # mouth center (upper_lip/lower_lip midpoint), combined with mouth width.
+        mouth_center = (landmarks[ix["upper_lip"]] + landmarks[ix["lower_lip"]]) / 2.0
+        left_corner = landmarks[ix["left_mouth_corner"]]
+        right_corner = landmarks[ix["right_mouth_corner"]]
+        # Corner displacement: how far each corner is from mouth center
+        corner_disp = (float(np.linalg.norm(left_corner - mouth_center)) +
+                       float(np.linalg.norm(right_corner - mouth_center))) / 2.0
+        # Cheek raise proxy (AU6): cheek-to-eye distance decrease
+        left_cheek_eye_dist = dist(ix["left_cheek"], ix["left_eye_bottom"])
+        right_cheek_eye_dist = dist(ix["right_cheek"], ix["right_eye_bottom"])
+        cheek_raise = 1.0 / max((left_cheek_eye_dist + right_cheek_eye_dist) / 2.0, 1e-6)
+        # Combine: higher corner displacement + higher cheek raise → stronger smile
+        smile_intensity = corner_disp * cheek_raise
+
         return {
             "eye_openness": eye_openness,
+            "left_eye_open": left_eye_open,
+            "right_eye_open": right_eye_open,
             "brow_height": brow_height,
+            "left_brow": left_brow,
+            "right_brow": right_brow,
             "mouth_openness": mouth_openness,
             "mouth_width": mouth_width,
             "head_pitch": head_pitch,
             "head_yaw": head_yaw,
+            "head_roll": head_roll,
+            "gaze_horizontal": float(gaze_horizontal),
+            "gaze_vertical": float(gaze_vertical),
+            "eye_asymmetry": float(eye_asymmetry),
+            "brow_asymmetry": float(brow_asymmetry),
+            "mouth_asymmetry": float(mouth_asymmetry),
+            "smile_intensity": float(smile_intensity),
         }
 
     def _compute_features(self, frame_data: list[dict], duration: float) -> VideoFeatures:
@@ -211,6 +329,7 @@ class VideoPipeline:
         features = VideoFeatures()
         features.n_frames_processed = len(frame_data)
         features.duration_sec = duration
+        duration_min = max(duration / 60.0, 0.01)
 
         eye_openness = np.array([f["eye_openness"] for f in frame_data])
         brow_height = np.array([f["brow_height"] for f in frame_data])
@@ -223,7 +342,7 @@ class VideoPipeline:
         features.avg_eye_openness = float(np.mean(eye_openness))
         features.eye_openness_std = float(np.std(eye_openness))
         blinks = np.sum(np.diff((eye_openness < self._blink_threshold).astype(int)) == 1)
-        features.blink_rate = float(blinks) / max(duration / 60.0, 0.01)
+        features.blink_rate = float(blinks) / duration_min
 
         # Brow features
         features.avg_brow_height = float(np.mean(brow_height))
@@ -249,6 +368,95 @@ class VideoPipeline:
         # AU change rate (mean absolute frame-to-frame change)
         deltas = np.abs(np.diff(all_signals, axis=1))
         features.au_change_rate = float(np.mean(deltas))
+
+        # ===================================================================
+        # NEW FEATURE AGGREGATIONS
+        # ===================================================================
+
+        # --- 1. Gaze direction features ---
+        gaze_h = np.array([f["gaze_horizontal"] for f in frame_data])
+        gaze_v = np.array([f["gaze_vertical"] for f in frame_data])
+        features.avg_gaze_horizontal = float(np.mean(gaze_h))
+        features.avg_gaze_vertical = float(np.mean(gaze_v))
+        features.gaze_horizontal_std = float(np.std(gaze_h))
+        features.gaze_vertical_std = float(np.std(gaze_v))
+        features.gaze_stability = float(np.sqrt(np.std(gaze_h)**2 + np.std(gaze_v)**2))
+        # Gaze avoidance: fraction of frames where gaze deviates > 0.3 (normalised) from center
+        gaze_deviation = np.sqrt(gaze_h**2 + gaze_v**2)
+        features.gaze_avoidance_ratio = float(np.mean(gaze_deviation > 0.3))
+
+        # --- 2. Facial asymmetry features ---
+        eye_asym = np.array([f["eye_asymmetry"] for f in frame_data])
+        brow_asym = np.array([f["brow_asymmetry"] for f in frame_data])
+        mouth_asym = np.array([f["mouth_asymmetry"] for f in frame_data])
+        features.avg_eye_asymmetry = float(np.mean(eye_asym))
+        features.avg_brow_asymmetry = float(np.mean(brow_asym))
+        features.avg_mouth_asymmetry = float(np.mean(mouth_asym))
+        features.overall_facial_asymmetry = float(np.mean([features.avg_eye_asymmetry,
+                                                           features.avg_brow_asymmetry,
+                                                           features.avg_mouth_asymmetry]))
+
+        # --- 3. Smile intensity features ---
+        smile = np.array([f["smile_intensity"] for f in frame_data])
+        features.avg_smile_intensity = float(np.mean(smile))
+        features.smile_intensity_std = float(np.std(smile))
+        # Detect smile events: smile exceeds mean + 0.5*std (adaptive threshold)
+        smile_threshold = float(np.mean(smile) + 0.5 * np.std(smile))
+        smile_binary = (smile > smile_threshold).astype(int)
+        smile_onsets = np.sum(np.diff(smile_binary) == 1)
+        features.smile_frequency = float(smile_onsets) / duration_min
+        # Average smile duration (in frames)
+        if smile_onsets > 0:
+            smile_frames = np.sum(smile_binary)
+            features.avg_smile_duration_frames = float(smile_frames) / float(max(smile_onsets, 1))
+        else:
+            features.avg_smile_duration_frames = 0.0
+
+        # --- 4. Micro-expression detection ---
+        # A micro-expression is a rapid (<0.5s) transient spike in any AU proxy.
+        # We detect frames where the frame-to-frame AU change exceeds 2× the
+        # mean change rate AND the spike reverts within a short temporal window.
+        n_frames = len(frame_data)
+        if n_frames > 2:
+            # Effective FPS of the sampled stream
+            effective_fps = max(float(n_frames) / max(duration, 0.01), 1.0)
+            # Maximum spike duration in frames for <0.5 s events
+            max_spike_frames = max(int(0.5 * effective_fps), 1)
+            # Compute frame-to-frame absolute changes for each AU signal
+            au_deltas = np.abs(np.diff(all_signals, axis=1))  # shape: (4, n_frames-1)
+            mean_delta = np.mean(au_deltas, axis=1, keepdims=True)  # per signal
+            spike_threshold = 2.0 * mean_delta + 1e-8
+            # A frame is a "spike" if any AU channel exceeds its threshold
+            spike_any = np.any(au_deltas > spike_threshold, axis=0)  # shape: (n_frames-1,)
+            # Count isolated spike bursts of length <= max_spike_frames
+            micro_count = 0
+            i = 0
+            spike_indices = np.where(spike_any)[0]
+            while i < len(spike_indices):
+                # Find the end of this contiguous spike run
+                j = i
+                while j + 1 < len(spike_indices) and spike_indices[j + 1] - spike_indices[j] <= 1:
+                    j += 1
+                run_length = spike_indices[j] - spike_indices[i] + 1
+                if run_length <= max_spike_frames:
+                    micro_count += 1
+                i = j + 1
+            features.micro_expression_count = float(micro_count)
+            features.micro_expression_rate = float(micro_count) / duration_min
+        else:
+            features.micro_expression_count = 0.0
+            features.micro_expression_rate = 0.0
+
+        # --- 5. Head pose stability features ---
+        head_roll = np.array([f["head_roll"] for f in frame_data])
+        features.head_pitch_std = float(np.std(head_pitch))
+        features.head_yaw_std = float(np.std(head_yaw))
+        features.head_roll_std = float(np.std(head_roll))
+        features.head_pitch_range = float(np.ptp(head_pitch))
+        features.head_yaw_range = float(np.ptp(head_yaw))
+        features.head_roll_range = float(np.ptp(head_roll))
+
+        # ===================================================================
 
         features.n_faces_detected = len(frame_data)
         features.face_detection_rate = 1.0  # all frame_data entries have faces

@@ -93,6 +93,21 @@ def _analyze_audio_indicators(features: AudioFeatures) -> tuple[list[str], list[
     else:
         protective.append("Normal speech rate")
 
+    if getattr(features, 'jitter', 0) > 0.03:
+        risk.append("Elevated vocal jitter (pitch perturbation)")
+        
+    if getattr(features, 'shimmer', 0) > 0.05:
+        risk.append("Elevated vocal shimmer (amplitude perturbation)")
+
+    if getattr(features, 'hnr_db', 20) < 10.0:
+        risk.append("Low harmonics-to-noise ratio (hoarse/breathy voice)")
+
+    if getattr(features, 'voice_tremor_magnitude', 0) > 0.2:
+        risk.append("Vocal tremor detected")
+
+    if getattr(features, 'pause_count', 0) > 10:
+        risk.append("High frequency of speech pauses")
+        
     if features.rms_mean < 0.01:
         risk.append("Low vocal energy")
     else:
@@ -100,9 +115,6 @@ def _analyze_audio_indicators(features: AudioFeatures) -> tuple[list[str], list[
 
     if features.voiced_fraction < 0.4:
         risk.append("Long pauses / low speech activity")
-
-    if features.spectral_flatness_mean > 0.1:
-        risk.append("Breathy vocal quality")
 
     return risk, protective
 
@@ -121,11 +133,24 @@ def _analyze_video_indicators(features: VideoFeatures) -> tuple[list[str], list[
         risk.append("Elevated blink rate")
     elif features.blink_rate < 5:
         risk.append("Reduced blink rate")
+        
+    if getattr(features, 'gaze_avoidance_ratio', 0) > 0.3:
+        risk.append("High gaze avoidance / lack of eye contact")
+    else:
+        protective.append("Normal eye contact")
+        
+    if getattr(features, 'overall_facial_asymmetry', 0) > 0.1:
+        risk.append("Elevated facial asymmetry")
+        
+    if getattr(features, 'smile_frequency', 0) < 1.0:
+        risk.append("Reduced smile frequency")
+    else:
+        protective.append("Frequent smiling")
 
     if features.avg_mouth_openness < 0.005:
         risk.append("Reduced mouth movement")
 
-    if features.head_movement_magnitude < 0.005:
+    if getattr(features, 'head_pitch_std', 1) < 0.02 and getattr(features, 'head_yaw_std', 1) < 0.02:
         risk.append("Minimal head movement (psychomotor retardation)")
     else:
         protective.append("Normal head movement")
@@ -154,8 +179,8 @@ class InferenceService:
     def load_model(self, checkpoint_path: Optional[Path] = None):
         """Load or initialize the fusion model."""
         self.model = AffectiSenseModel(
-            audio_input_dim=136,
-            video_input_dim=16,
+            audio_input_dim=119,
+            video_input_dim=38,
             embed_dim=settings.MODEL_EMBED_DIM,
             n_bottleneck=settings.MODEL_N_BOTTLENECK_TOKENS,
             n_heads=settings.MODEL_N_ATTENTION_HEADS,

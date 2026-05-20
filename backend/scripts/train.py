@@ -89,8 +89,8 @@ class MultimodalDepressionDataset(Dataset):
         
         return {
             "participant_id": participant_id,
-            "audio_features": audio_feats if audio_feats is not None else torch.zeros(136),
-            "video_features": video_feats if video_feats is not None else torch.zeros(16),
+            "audio_features": audio_feats if audio_feats is not None else torch.zeros(119),
+            "video_features": video_feats if video_feats is not None else torch.zeros(38),
             "audio_avail": torch.tensor([audio_feats is not None], dtype=torch.bool),
             "video_avail": torch.tensor([video_feats is not None], dtype=torch.bool),
             "severity": severity,
@@ -104,8 +104,8 @@ def train_model(args):
     
     # 1. Initialize Model
     model = AffectiSenseModel(
-        audio_input_dim=136,
-        video_input_dim=16,
+        audio_input_dim=119,
+        video_input_dim=38,
         embed_dim=settings.MODEL_EMBED_DIM,
         n_bottleneck=settings.MODEL_N_BOTTLENECK_TOKENS,
         n_heads=settings.MODEL_N_ATTENTION_HEADS,
